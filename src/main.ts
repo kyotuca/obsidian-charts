@@ -21,8 +21,8 @@ import { chartFromTable } from 'src/chartFromTable';
 import { renderError, saveImageToVaultAndPaste } from 'src/util';
 
 export default class ChartPlugin extends Plugin {
-  settings: ChartPluginSettings;
-  renderer: Renderer;
+  settings!: ChartPluginSettings;
+  renderer!: Renderer;
 
   postprocessor = async (
     content: string,
