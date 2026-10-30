@@ -1,7 +1,7 @@
-import { Chart, ChartConfiguration, SankeyControllerDatasetOptions, registerables } from 'chart.js';
-import { SankeyController, Flow } from 'chartjs-chart-sankey';
+import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import { SankeyController, Flow, SankeyControllerDatasetOptions } from 'chartjs-chart-sankey';
 import './date-adapter/chartjs-adapter-moment.esm.js';
-import { MarkdownPostProcessorContext, MarkdownRenderChild, parseYaml, TFile } from 'obsidian';
+import { EventRef, MarkdownPostProcessorContext, MarkdownRenderChild, parseYaml, TFile } from 'obsidian';
 import { generateInnerColors, renderError } from 'src/util';
 import type { ImageOptions } from './constants/settingsConstants';
 import type ChartPlugin from 'src/main';
@@ -24,7 +24,7 @@ export default class Renderer {
     async datasetPrep(yaml: any, el: HTMLElement, themeColors = false): Promise<{ chartOptions: ChartConfiguration; width: string; }> {
         let datasets = [];
         if (!yaml.id) {
-            const colors = [];
+            const colors: string[] = [];
             if (this.plugin.settings.themeable || themeColors) {
                 let i = 1;
                 while (true) {
@@ -38,7 +38,7 @@ export default class Renderer {
                 }
             }
             for (let i = 0; yaml.series.length > i; i++) {
-                const {title, ...rest} = yaml.series[i];
+                const { title, ...rest } = yaml.series[i];
                 const dataset = {
                     label: title ?? "",
                     backgroundColor: yaml.labelColors ? colors.length ? generateInnerColors(colors, yaml.transparency) : generateInnerColors(this.plugin.settings.colors, yaml.transparency) : colors.length ? generateInnerColors(colors, yaml.transparency)[i] : generateInnerColors(this.plugin.settings.colors, yaml.transparency)[i],
@@ -52,10 +52,10 @@ export default class Renderer {
                     // colorFrom, colorTo is accepted as object in yaml, but should be function for sankey.
                     if (dataset.colorFrom)
                         (dataset as SankeyControllerDatasetOptions).colorFrom = (c) => yaml.series[i].colorFrom[c.dataset.data[c.dataIndex].from] ?? colors[i] ?? 'green'
-                    
+
                     if (dataset.colorTo)
                         (dataset as SankeyControllerDatasetOptions).colorTo = (c) => yaml.series[i].colorTo[c.dataset.data[c.dataIndex].to] ?? colors[i] ?? 'green'
-                    
+
                 }
                 datasets.push(dataset);
             }
@@ -67,7 +67,7 @@ export default class Renderer {
 
         const gridColor = getComputedStyle(el).getPropertyValue('--background-modifier-border');
 
-        let chartOptions: ChartConfiguration;
+        let chartOptions: ChartConfiguration<any> | undefined;
 
         Chart.defaults.color = yaml.textColor || getComputedStyle(el).getPropertyValue('--text-muted');
         Chart.defaults.font.family = getComputedStyle(el).getPropertyValue('--mermaid-font');
@@ -163,17 +163,17 @@ export default class Renderer {
             datasets = datasets.map(dataset => {
                 return {
                     ...dataset,
-                    data: dataset.data.map((item: object | any[]) => 
+                    data: dataset.data.map((item: object | any[]) =>
                         Array.isArray(item) && item.length === 3 ?
-                        {
-                            from: item[0],
-                            flow: item[1],
-                            to: item[2],
-                        } : item
+                            {
+                                from: item[0],
+                                flow: item[1],
+                                to: item[2],
+                            } : item
                     )
                 }
             }) as ChartConfiguration<'sankey'>['data']['datasets'];
-            
+
             (chartOptions as ChartConfiguration<'sankey'>) = {
                 type: yaml.type,
                 data: {
@@ -186,7 +186,7 @@ export default class Renderer {
                     },
                 }
             }
-        }else {
+        } else {
             (chartOptions as ChartConfiguration<"pie" | "doughnut" | "bubble" | "scatter">) = {
                 type: yaml.type,
                 data: {
@@ -202,6 +202,9 @@ export default class Renderer {
                 }
             };
         }
+        if (!chartOptions) {
+            throw new Error("Could not generate the configuration for the graph.")
+        }
         return { chartOptions, width: yaml.width };
     }
 
@@ -212,11 +215,10 @@ export default class Renderer {
     async imageRenderer(yaml: string, options: ImageOptions): Promise<string> {
         const delay = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
         const destination = document.createElement('canvas');
-        const destinationContext = destination.getContext("2d");
 
         const chartOptions = await this.datasetPrep(await parseYaml(yaml.replace("```chart", "").replace("```", "").replace(/\t/g, '    ')), document.body);
 
-        new Chart(destinationContext, chartOptions.chartOptions);
+        new Chart(destination, chartOptions.chartOptions);
 
         document.body.append(destination);
         await delay(250);
@@ -231,9 +233,11 @@ export default class Renderer {
 
         if (data.chartOptions) {
             try {
-                let chart = new Chart(destination.getContext("2d"), data.chartOptions);
-                destination.parentElement.style.width = data.width ?? "100%";
-                destination.parentElement.style.margin = "auto";
+                let chart = new Chart(destination, data.chartOptions);
+                if (destination.parentElement) {
+                    destination.parentElement.style.width = data.width ?? "100%";
+                    destination.parentElement.style.margin = "auto";
+                }
                 return chart;
             } catch (error) {
                 renderError(error, el);
@@ -241,7 +245,7 @@ export default class Renderer {
             }
         } else {
             try {
-                let chart = new Chart(destination.getContext("2d"), data);
+                let chart = new Chart(destination, data);
                 return chart;
             } catch (error) {
                 renderError(error, el);
@@ -257,7 +261,7 @@ export default class Renderer {
 
 class ChartRenderChild extends MarkdownRenderChild {
     data: any;
-    chart: null | Chart;
+    chart!: null | Chart;
     renderer: Renderer;
     ownPath: string;
     el: HTMLElement;
@@ -291,12 +295,24 @@ class ChartRenderChild extends MarkdownRenderChild {
                     }
                 }
                 x.datasets = [];
-                let linkDest: TFile;
-                if (this.data.file) linkDest = this.renderer.plugin.app.metadataCache.getFirstLinkpathDest(this.data.file, this.renderer.plugin.app.workspace.getActiveFile().path);
-                const pos = this.renderer.plugin.app.metadataCache.getFileCache(
-                    linkDest ?? this.renderer.plugin.app.vault.getAbstractFileByPath(this.ownPath) as TFile).sections.find(pre => pre.id === this.data.id)?.position;
+                let linkDest: TFile | null = null;
+                if (this.data.file) {
+                    const activeFile = this.renderer.plugin.app.workspace.getActiveFile();
+                    const sourcePath = activeFile ? activeFile.path : "";
+                    linkDest = this.renderer.plugin.app.metadataCache.getFirstLinkpathDest(this.data.file, sourcePath);
+                } else {
+                    const abstractFile = this.renderer.plugin.app.vault.getAbstractFileByPath(this.ownPath);
+                    if (abstractFile instanceof TFile) {
+                        linkDest = abstractFile;
+                    }
+                }
+                if (!linkDest) {
+                    throw new Error("file not found");
+                }
+                const cache = this.renderer.plugin.app.metadataCache.getFileCache(linkDest);
+                const pos = cache?.sections?.find(pre => pre.id === this.data.id)?.position;
                 if (!pos) {
-                    throw "Invalid id and/or file";
+                    throw new Error("Invalid id and/or file");
                 }
 
                 const tableString = (await this.renderer.plugin.app.vault.cachedRead(this.data.file ? linkDest : this.renderer.plugin.app.vault.getAbstractFileByPath(this.ownPath) as TFile)).substring(pos.start.offset, pos.end.offset);
@@ -328,7 +344,9 @@ class ChartRenderChild extends MarkdownRenderChild {
             renderError(error, this.el);
         }
         if (this.data.id) {
-            this.renderer.plugin.app.metadataCache.on("changed", this.changeHandler);
+            this.registerEvent(
+                this.renderer.plugin.app.metadataCache.on("changed", this.changeHandler)
+            );
         }
         this.renderer.plugin.app.workspace.on('css-change', this.reload);
     }
@@ -345,7 +363,6 @@ class ChartRenderChild extends MarkdownRenderChild {
     }
 
     onunload() {
-        this.renderer.plugin.app.metadataCache.off("changed", this.changeHandler);
         this.renderer.plugin.app.workspace.off('css-change', this.reload);
         this.el.empty();
         this.chart && this.chart.destroy();
