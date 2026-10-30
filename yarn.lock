@@ -68,6 +68,18 @@
   resolved "https://registry.npmjs.org/@marijn/find-cluster-break/-/find-cluster-break-1.0.4.tgz"
   integrity sha512-Wy0V7+SGUjnF9/TkiM1hKVDPj7jKXduPNboMVtHTA8dySMURWqfg/JZ9E2Sq8JgSJmkl7k7Qe9FLeMSrSraWmQ==
 
+"@sgratzl/boxplots@^2.0.0":
+  version "2.0.0"
+  resolved "https://registry.npmjs.org/@sgratzl/boxplots/-/boxplots-2.0.0.tgz"
+  integrity sha512-XHQTNTk0OtDEZyT7v+BKNKt4OEXYhn4GtfI+iQ1eFiFsx8Aq/csz+mOJYbfpkiP8Popd/8Nky8vLh1zzkYn0gw==
+
+"@sgratzl/chartjs-chart-boxplot@^4.4.5":
+  version "4.4.5"
+  resolved "https://registry.npmjs.org/@sgratzl/chartjs-chart-boxplot/-/chartjs-chart-boxplot-4.4.5.tgz"
+  integrity sha512-hvHcUIPIyzNPRmvPNIbA/R68zZKv7XHUcNrYJZTB8QsVE0KKuuGuEK98yCeCy32vZXQBl/PrHGOYMXeuqZrU0w==
+  dependencies:
+    "@sgratzl/boxplots" "^2.0.0"
+
 "@sphinxxxx/color-conversion@^2.2.2":
   version "2.2.2"
   resolved "https://registry.npmjs.org/@sphinxxxx/color-conversion/-/color-conversion-2.2.2.tgz"
@@ -174,7 +186,7 @@ buffer-crc32@^1.0.0:
   resolved "https://registry.npmjs.org/buffer-crc32/-/buffer-crc32-1.0.0.tgz"
   integrity sha512-Db1SbgBS/fg/392AblrMJk97KggmvYhr4pB5ZIMTWtaivCPMWLkmb7m21cJvpvgK+J3nsU2CmmixNBZx4vFj/w==
 
-chart.js@^4.6.1, chart.js@>=3.0.0, chart.js@>=3.3.0, chart.js@>=4.0.0:
+chart.js@^4.1.1, chart.js@^4.6.1, chart.js@>=3.0.0, chart.js@>=3.3.0, chart.js@>=4.0.0:
   version "4.6.1"
   resolved "https://registry.npmjs.org/chart.js/-/chart.js-4.6.1.tgz"
   integrity sha512-hJyniucsFmq//EvXYvJ6c6mahPoI3kaxdjVH8awTaJ/fDNWeSqqqArixMJWkWNN6fcYvPU3HneSANFNYtRi61g==

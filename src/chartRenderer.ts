@@ -3,13 +3,24 @@ import { SankeyController, Flow, SankeyControllerDatasetOptions } from 'chartjs-
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import './date-adapter/chartjs-adapter-moment.esm.js';
 import { EventRef, MarkdownPostProcessorContext, MarkdownRenderChild, parseYaml, TFile } from 'obsidian';
+import { BoxPlotController, BoxAndWiskers, ViolinController, Violin } from '@sgratzl/chartjs-chart-boxplot';
 import { generateInnerColors, renderError } from 'src/util';
 import type { ImageOptions } from './constants/settingsConstants';
 import type ChartPlugin from 'src/main';
 import { generateTableData } from 'src/chartFromTable';
 import annotationPlugin from 'chartjs-plugin-annotation'
 
-Chart.register(...registerables, annotationPlugin, ChartDataLabels, SankeyController, Flow);
+Chart.register(
+    ...registerables,
+    annotationPlugin,
+    ChartDataLabels,
+    SankeyController,
+    Flow,
+    BoxPlotController,
+    BoxAndWiskers,
+    ViolinController,
+    Violin
+)
 Chart.defaults.set('plugins.datalabels', {
     display: false
 })
@@ -111,8 +122,9 @@ export default class Renderer {
                     },
                 }
             };
-        } else if (yaml.type == 'bar' || yaml.type == 'line') {
-            (chartOptions as ChartConfiguration<"bar" | "line">) = {
+        } else if (yaml.type == 'bar' || yaml.type == 'line' ||
+            yaml.type == 'boxplot' || yaml.type == 'violin') {
+            (chartOptions as ChartConfiguration<"bar" | "line" | "boxplot" | "violin">) = {
                 type: yaml.type,
                 data: {
                     labels,
