@@ -7,6 +7,7 @@ import {
   View,
   Notice,
   MarkdownPostProcessorContext,
+  MarkdownFileInfo,
 } from 'obsidian';
 
 import Renderer from './chartRenderer';
@@ -112,7 +113,8 @@ export default class ChartPlugin extends Plugin {
       id: 'creation-helper',
       name: 'Insert new Chart',
       checkCallback: (checking: boolean) => {
-        let leaf = this.app.workspace.activeLeaf;
+        let leaf = this.app.workspace.getMostRecentLeaf();
+        if (!leaf) return;
         if (leaf.view instanceof MarkdownView) {
           if (!checking) {
             new CreationHelperModal(
@@ -131,10 +133,10 @@ export default class ChartPlugin extends Plugin {
     this.addCommand({
       id: 'chart-from-table-column',
       name: 'Create Chart from Table (Column oriented Layout)',
-      editorCheckCallback: (checking: boolean, editor: Editor, view: View) => {
+      editorCheckCallback: (checking: boolean, editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
         let selection = editor.getSelection();
         if (
-          view instanceof MarkdownView &&
+          ctx instanceof MarkdownView &&
           selection.split('\n').length >= 3 &&
           selection.split('|').length >= 2
         ) {
@@ -150,9 +152,9 @@ export default class ChartPlugin extends Plugin {
     this.addCommand({
       id: 'chart-from-table-row',
       name: 'Create Chart from Table (Row oriented Layout)',
-      editorCheckCallback: (checking: boolean, editor: Editor, view: View) => {
+      editorCheckCallback: (checking: boolean, editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
         if (
-          view instanceof MarkdownView &&
+          ctx instanceof MarkdownView &&
           editor.getSelection().split('\n').length >= 3 &&
           editor.getSelection().split('|').length >= 2
         ) {
@@ -168,19 +170,21 @@ export default class ChartPlugin extends Plugin {
     this.addCommand({
       id: 'chart-to-svg',
       name: 'Create Image from Chart',
-      editorCheckCallback: (checking: boolean, editor: Editor, view: View) => {
+      editorCheckCallback: (checking: boolean, editor: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
         if (
-          view instanceof MarkdownView &&
+          ctx instanceof MarkdownView &&
           editor.getSelection().startsWith('```chart') &&
           editor.getSelection().endsWith('```')
         ) {
           if (!checking) {
+            const file = this.app.workspace.getActiveFile();
+            if (!file) { return }
             new Notice('Rendering Chart...');
             saveImageToVaultAndPaste(
               editor,
               this.app,
               this.renderer,
-              view.file,
+              file,
               this.settings
             );
           }
@@ -202,8 +206,8 @@ export default class ChartPlugin extends Plugin {
     this.registerEvent(
       this.app.workspace.on(
         'editor-menu',
-        (menu: Menu, _: Editor, view: MarkdownView) => {
-          if (view && this.settings.contextMenu) {
+        (menu: Menu, _: Editor, ctx: MarkdownView | MarkdownFileInfo) => {
+          if (ctx && this.settings.contextMenu) {
             menu.addItem((item) => {
               item
                 .setTitle('Insert Chart')
@@ -211,7 +215,7 @@ export default class ChartPlugin extends Plugin {
                 .onClick((_) => {
                   new CreationHelperModal(
                     this.app,
-                    view,
+                    ctx as MarkdownView,
                     this.settings,
                     this.renderer
                   ).open();
