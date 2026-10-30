@@ -1,5 +1,6 @@
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
 import { SankeyController, Flow, SankeyControllerDatasetOptions } from 'chartjs-chart-sankey';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
 import './date-adapter/chartjs-adapter-moment.esm.js';
 import { EventRef, MarkdownPostProcessorContext, MarkdownRenderChild, parseYaml, TFile } from 'obsidian';
 import { generateInnerColors, renderError } from 'src/util';
@@ -8,7 +9,10 @@ import type ChartPlugin from 'src/main';
 import { generateTableData } from 'src/chartFromTable';
 import annotationPlugin from 'chartjs-plugin-annotation'
 
-Chart.register(...registerables, annotationPlugin, SankeyController, Flow);
+Chart.register(...registerables, annotationPlugin, ChartDataLabels, SankeyController, Flow);
+Chart.defaults.set('plugins.datalabels', {
+    display: false
+})
 
 // I need to refactor this
 // Or just rewrite it completely
@@ -205,6 +209,18 @@ export default class Renderer {
         if (!chartOptions) {
             throw new Error("Could not generate the configuration for the graph.")
         }
+
+        const datalabelsConfig = yaml.datalabels ?? yaml.dataLabels;
+        chartOptions.options = chartOptions.options || {};
+        chartOptions.options.plugins = {
+            ...chartOptions.options.plugins,
+            datalabels: datalabelsConfig !== undefined
+                ? (typeof datalabelsConfig === 'boolean'
+                    ? { display: datalabelsConfig }
+                    : { display: true, ...datalabelsConfig })
+                : { display: false }
+        };
+
         return { chartOptions, width: yaml.width };
     }
 
@@ -229,6 +245,7 @@ export default class Renderer {
     }
 
     renderRaw(data: any, el: HTMLElement): Chart | null {
+        el.empty();
         const destination = el.createEl('canvas');
 
         if (data.chartOptions) {
